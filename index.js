@@ -25,8 +25,16 @@ async function run() {
 		// Connect the client to the server	(optional starting in v4.7)
 		await client.connect();
 
+		const userCollection = client.db("sportsDb").collection("users");
 		const classCollection = client.db("sportsDb").collection("classes");
-        const instructorCollection = client.db("sportsDb").collection("instructors");
+		const instructorCollection = client.db("sportsDb").collection("instructors");
+
+		// User collection
+		app.post("/users", async (req, res) => {
+			const user = req.body;
+			const result = await userCollection.insertOne(user);
+			res.send(result);
+		});
 
 		// Classes Collection
 		app.get("/classes", async (req, res) => {
@@ -39,6 +47,8 @@ async function run() {
 			const result = await instructorCollection.find().toArray();
 			res.send(result);
 		});
+
+		// Cart Collection
 
 		// Send a ping to confirm a successful connection
 		await client.db("admin").command({ ping: 1 });
