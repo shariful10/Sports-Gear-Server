@@ -30,6 +30,12 @@ async function run() {
 		const classCollection = client.db("sportsDb").collection("classes");
 		const instructorCollection = client.db("sportsDb").collection("instructors");
 
+		app.post("/jwt", (req, res) => {
+			const user = req.body;
+			const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
+			res.send({ token });
+		});
+
 		// User collection
 		app.get("/users", async (req, res) => {
 			const result = await userCollection.find().toArray();
