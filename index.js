@@ -15,6 +15,8 @@ const verifyJWT = (req, res, next) => {
 	if (!authorization) {
 		return res.status(401).send({ error: true, message: "Invalid Token" });
 	}
+	console.log(authorization);
+
 	// Bearer token
 	const token = authorization.split(" ")[1];
 	jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
@@ -50,14 +52,16 @@ async function run() {
 			const user = req.body;
 			const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
 			res.send({ token });
+			console.log(token);
 		});
 
-		const verifyInstructor = async (req, res, next) => {
+		const verifyAdmin = async (req, res, next) => {
 			const email = req.decoded.email;
 			const query = { email: email };
 			const user = await userCollection.findOne(query);
-			if (user?.role !== "Instructor") {
-				return res.status(403).send({ error: true, message: "Forbidden message" });
+			console.log(user);
+			if (user?.role !== "admin") {
+				return res.send({ admin: false });
 			}
 			next();
 		};
@@ -81,7 +85,19 @@ async function run() {
 			res.send(result);
 		});
 
-		app.patch("/users/admin/:id", async (req, res) => {
+		app.get("/users/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+			const email = req.params.email;
+
+			if (req.decoded.email !== email) {
+				res.send({ admin: false });
+			}
+			const query = { email: email };
+			const user = await userCollection.findOne(query);
+			const result = { admin: user?.role === "admin" };
+			res.send(result);
+		});
+
+		app.patch("/users/admin/:id", verifyJWT, verifyAdmin, async (req, res) => {
 			const id = req.params.id;
 			const { role } = req.body;
 			const filter = { _id: new ObjectId(id) };
@@ -94,6 +110,29 @@ async function run() {
 			res.send(result);
 		});
 
+		// Make Instructor
+		app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+			const email = req.params.email;
+			if (req.decoded.email !== email) {
+				res.send({ instructor: false });
+			}
+			const query = { email: email };
+			const user = await userCollection.findOne(query);
+			const result = { instructor: user?.role === "instructor" };
+			res.send(result);
+		});
+
+		app.patch("/classes/admin/feedback/:id", verifyJWT, verifyAdmin, async (req, res) => {
+			const _id = new ObjectId(req.params.id);
+			const { feedback } = req.body;
+			const result = await classCollection.updateOne(
+				{ _id },
+				{ $set: { feedback } },
+				{ upsert: true }
+			);
+			res.send(result);
+		});
+
 		// Classes Collection
 		app.get("/classes", async (req, res) => {
 			const result = await classCollection.find().toArray();
@@ -103,6 +142,32 @@ async function run() {
 		app.post("/classes", async (req, res) => {
 			const newItem = req.body;
 			const result = await classCollection.insertOne(newItem);
+			res.send(result);
+		});
+
+		app.patch("/classes/admin/status/:id", async (req, res) => {
+			const id = req.params.id;
+			const { status } = req.body;
+			const filter = { _id: new ObjectId(id) };
+			const updateDoc = {
+				$set: {
+					status: status,
+				},
+			};
+			const result = await classCollection.updateOne(filter, updateDoc);
+			res.send(result);
+		});
+
+		app.patch("/classes/admin/:id", async (req, res) => {
+			const id = req.params.id;
+			const { feeedback } = req.body;
+			const filter = { _id: new ObjectId(id) };
+			const updateDoc = {
+				$set: {
+					feeedback: feeedback,
+				},
+			};
+			const result = await classCollection.updateOne(filter, updateDoc);
 			res.send(result);
 		});
 
