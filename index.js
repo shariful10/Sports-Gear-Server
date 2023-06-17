@@ -47,10 +47,11 @@ async function run() {
 		const userCollection = client.db("sportsDb").collection("users");
 		const classCollection = client.db("sportsDb").collection("classes");
 		const instructorCollection = client.db("sportsDb").collection("instructors");
+		const cartCollection = client.db("sportsDb").collection("carts");
 
 		app.post("/jwt", (req, res) => {
 			const user = req.body;
-			const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
+			const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "10h" });
 			res.send({ token });
 			console.log(token);
 		});
@@ -177,7 +178,18 @@ async function run() {
 			res.send(result);
 		});
 
-		// Cart Collection
+		app.get("/carts/:email", async (req, res) => {
+			const email = req.params.email;
+			const result = await cartCollection.find({ email }).toArray();
+			res.send(result);
+		});
+
+		app.post("/carts", async (req, res) => {
+			const singleClass = req.body;
+			console.log(singleClass);
+			const result = await cartCollection.insertOne(singleClass);
+			res.send(result);
+		});
 
 		// Send a ping to confirm a successful connection
 		await client.db("admin").command({ ping: 1 });
